@@ -198,7 +198,9 @@ CM.recipes = [
     },
     {
         slug: "apple-pie",
-        title: "Apple Pie",
+        title: "苹果派",
+        py: "píngguǒ pài",
+        en: "Apple pie",
         category: "Baking",
         tags: ["dessert", "pie", "apples"],
         hue: 44,

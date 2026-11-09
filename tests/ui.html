@@ -111,7 +111,7 @@
                     click($(".chip--time"));
                     await sleep(60);
                     check($$("#timers .timer").length === 1, "tapping a time starts a timer");
-                    check(/Apple Pie · step 1/.test($("#timers .timer-label").textContent), "timer is labelled with the step", $("#timers .timer-label").textContent);
+                    check(/苹果派 · step 1/.test($("#timers .timer-label").textContent), "timer is labelled with the step", $("#timers .timer-label").textContent);
                     click($('#timers [data-act="close"]'));
                     await sleep(30);
                     check($$("#timers .timer").length === 0, "timer can be cancelled");
