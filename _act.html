@@ -1,0 +1,5 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;display:flex;gap:10px;background:#888;align-items:flex-start}iframe{border:0;flex:none}</style></head><body><script>
+// ?w=390&h=844&u=<url>&do=<js run inside the frame after load>  (repeatable u/do pairs)
+const q=new URLSearchParams(location.search);const w=+q.get("w")||390,h=+q.get("h")||844;const us=q.getAll("u"),ds=q.getAll("do");
+us.forEach((u,i)=>{const f=document.createElement("iframe");f.width=w;f.height=h;f.src=u;f.onload=()=>setTimeout(()=>{try{f.contentWindow.eval(ds[i]||"")}catch(e){document.title="ERR "+e}},400);document.body.appendChild(f);});
+</script></body></html>

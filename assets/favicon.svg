@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <style>
+    .bg { fill: #171513; } .ink { stroke: #f3f0ea; } .steam { stroke: #ff6a4d; }
+    @media (prefers-color-scheme: dark) { .bg { fill: #f3f0ea; } .ink { stroke: #171513; } .steam { stroke: #d8432a; } }
+  </style>
+  <rect class="bg" width="48" height="48" rx="12"/>
+  <g fill="none" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" transform="translate(4.8 5.6) scale(0.8)">
+    <path class="steam" d="M17 18.5c-2.2-2.6 2.2-4.4 0-7.5M24 18.5c-2.2-2.6 2.2-4.4 0-9M31 18.5c-2.2-2.6 2.2-4.4 0-7.5"/>
+    <path class="ink" d="M6.5 24h35M9.5 24a14.5 14.5 0 0 0 29 0M19 41.5h10"/>
+  </g>
+</svg>

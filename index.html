@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en" data-theme="auto" data-text="m" data-motion="auto">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <title>Culinary Manifesto · Let Him Cook</title>
+        <meta name="description" content="Culinary Manifesto: Joshua Zeng's cookbook. Recipes I've cooked, dishes I'm manifesting, kitchen notes and tools. Let him cook." />
+        <meta name="author" content="Joshua Zeng" />
+        <meta name="theme-color" content="#f3f0ea" />
+        <meta name="color-scheme" content="light dark" />
+        <meta property="og:title" content="Culinary Manifesto" />
+        <meta property="og:description" content="A personal cookbook. Let him cook." />
+        <meta property="og:url" content="https://cook.jzeng.io/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://cook.jzeng.io/assets/og.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="assets/icon-192.png" sizes="192x192" type="image/png" />
+        <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+        <link rel="manifest" href="manifest.webmanifest" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Manifesto" />
+        <script>
+            // Apply saved theme, text size and motion before first paint (no flash).
+            (function () {
+                var d = document.documentElement;
+                try {
+                    var s = JSON.parse(localStorage.getItem("cm:settings") || "{}");
+                    var t = new URLSearchParams(location.search).get("theme") || s.theme;
+                    if (t) d.dataset.theme = t;
+                    if (s.text) d.dataset.text = s.text;
+                    var m = new URLSearchParams(location.search).get("motion") || s.motion;
+                    if (m) d.dataset.motion = m;
+                } catch (e) {}
+                d.classList.add("js");
+            })();
+            window.CM = {};
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Noto+Serif+SC:wght@500;600&display=swap"
+        />
+        <link rel="stylesheet" href="css/styles.css" />
+
+        <!-- data: edit these files to add recipes, ideas and notes -->
+        <script defer src="data/site.js"></script>
+        <script defer src="data/glossary.js"></script>
+        <script defer src="data/recipes.js"></script>
+        <script defer src="data/manifesting.js"></script>
+        <script defer src="data/notebook.js"></script>
+        <!-- app -->
+        <script defer src="js/quantity.js"></script>
+        <script defer src="js/core.js"></script>
+        <script defer src="js/timers.js"></script>
+        <script defer src="js/views/home.js"></script>
+        <script defer src="js/views/cookbook.js"></script>
+        <script defer src="js/views/recipe.js"></script>
+        <script defer src="js/views/manifesting.js"></script>
+        <script defer src="js/views/notebook.js"></script>
+        <script defer src="js/views/tools.js"></script>
+        <script defer src="js/app.js"></script>
+    </head>
+    <body>
+        <span id="top"></span>
+        <a class="skip" href="#view">Skip to content</a>
+
+        <header class="hdr" id="hdr">
+            <div class="hdr-in wrap">
+                <a class="brand" href="#/" aria-label="Culinary Manifesto, home" data-mark>
+                    <span class="brand-name">Culinary <em>Manifesto</em></span>
+                </a>
+                <nav class="nav" aria-label="Main">
+                    <a href="#/cookbook" data-nav="cookbook">Cookbook</a>
+                    <a href="#/manifesting" data-nav="manifesting">Manifesting<sup class="count" data-count="manifesting"></sup></a>
+                    <a href="#/notebook" data-nav="notebook">Notebook</a>
+                    <a href="#/tools" data-nav="tools">Tools</a>
+                </nav>
+                <div class="hdr-actions">
+                    <button type="button" class="icon-btn" id="theme-btn" aria-label="Change theme"></button>
+                    <button type="button" class="icon-btn" id="settings-btn" aria-label="Settings" title="Settings" data-icon="gear"></button>
+                </div>
+            </div>
+        </header>
+
+        <main id="view" tabindex="-1">
+            <noscript>
+                <section class="page-hero wrap">
+                    <h1 class="page-title"><em>Culinary Manifesto</em></h1>
+                    <p class="lede">This cookbook needs JavaScript to show its recipes.</p>
+                </section>
+            </noscript>
+        </main>
+
+        <footer class="ftr" id="footer"></footer>
+
+        <nav class="tabs" aria-label="Main">
+            <a href="#/cookbook" data-nav="cookbook" data-icon="book"><span>Cookbook</span></a>
+            <a href="#/manifesting" data-nav="manifesting" data-icon="sparkle"><span>Manifesting</span><sup class="count" data-count="manifesting"></sup></a>
+            <a href="#/notebook" data-nav="notebook" data-icon="pen"><span>Notebook</span></a>
+            <a href="#/tools" data-nav="tools" data-icon="scale"><span>Tools</span></a>
+        </nav>
+
+        <div class="timers" id="timers" aria-live="polite"></div>
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        <dialog class="sheet" id="settings" aria-labelledby="set-title"></dialog>
+    </body>
+</html>

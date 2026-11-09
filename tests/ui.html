@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>UI smoke test · Culinary Manifesto</title>
+        <style>
+            body { font: 14px/1.5 ui-monospace, Menlo, monospace; margin: 0; display: grid; grid-template-columns: 420px 1fr; height: 100vh; }
+            #log { padding: 16px; overflow: auto; border-right: 1px solid #ddd; }
+            .ok { color: #2f7d4f; } .bad { color: #c62828; font-weight: bold; }
+            iframe { width: 100%; height: 100%; border: 0; }
+        </style>
+    </head>
+    <body>
+        <div id="log"><b>UI smoke test</b> (uses this browser's storage; your saved data is backed up and restored)<br /><br /></div>
+        <iframe id="app" title="App under test"></iframe>
+        <script>
+            /*
+             * Open /tests/ui.html from a local server (python3 -m http.server). It drives the real app in the
+             * iframe: checking rows, scaling, unit conversion, timers, persistence, the lists, tools and settings.
+             */
+            const log = document.getElementById("log");
+            const frame = document.getElementById("app");
+            const results = [];
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            const W = () => frame.contentWindow;
+            const D = () => frame.contentDocument;
+            const $ = (s) => D().querySelector(s);
+            const $$ = (s) => Array.from(D().querySelectorAll(s));
+            function check(cond, label, detail) {
+                results.push({ ok: !!cond, label });
+                log.insertAdjacentHTML("beforeend", `<div class="${cond ? "ok" : "bad"}">${cond ? "✓" : "✗"} ${label}${cond || detail == null ? "" : " → " + String(detail)}</div>`);
+            }
+            async function until(fn, ms = 3000) {
+                const t = Date.now();
+                while (Date.now() - t < ms) {
+                    try { if (fn()) return true; } catch (e) {}
+                    await sleep(40);
+                }
+                return false;
+            }
+            const load = (hash) =>
+                new Promise((res) => {
+                    frame.onload = () => until(() => W().CM && W().CM.views && $("#view").children.length).then(res);
+                    frame.src = "../index.html?motion=reduced&t=" + Date.now() + (hash || "#/"); // new URL each time so it really reloads
+                });
+            const go = async (hash) => {
+                W().location.hash = hash;
+                await sleep(120);
+            };
+            const click = (el) => el && el.dispatchEvent(new (W().MouseEvent)("click", { bubbles: true, cancelable: true, view: W() }));
+
+            async function run() {
+                // keep the tester's real data safe
+                const backup = {};
+                Object.keys(localStorage).filter((k) => k.startsWith("cm:")).forEach((k) => { backup[k] = localStorage.getItem(k); localStorage.removeItem(k); });
+                try {
+                    await load("#/");
+                    const activeNav = () => $$("[data-nav].is-active").map((a) => a.dataset.nav);
+                    check(!activeNav().length, "home leaves the nav unselected", activeNav());
+                    check(!$("#preview"), "no hover preview");
+                    check($$("#latest .teaser-list li").length === Math.min(3, W().CM.recipes.length), "home shows the latest recipes");
+
+                    await go("#/cookbook");
+                    const crows = () => $$(".c-row");
+                    check(crows().length === W().CM.recipes.length, "cookbook lists every recipe", crows().length);
+                    check(activeNav().length === 2 && activeNav().every((n) => n === "cookbook"), "Cookbook is selected in the nav and tab bar", activeNav());
+                    const drafts = W().CM.recipes.filter((r) => r.status === "draft").length;
+                    check($$("#c-draft .c-row").length === drafts && !$("#c-draft-title").hidden, "drafts sit in their own section", $$("#c-draft .c-row").length);
+                    const q = $("#q");
+                    q.value = "pork";
+                    q.dispatchEvent(new Event("input"));
+                    check(crows().length === 1, "search finds the pork buns", crows().length);
+                    q.value = "";
+                    q.dispatchEvent(new Event("input"));
+                    click($('.chip-f[data-cat="Herbal"]'));
+                    check(crows().length === 3, "Herbal filter shows 3", crows().length);
+                    click($('.chip-f[data-cat=""]'));
+                    const sel = $("#c-sort");
+                    sel.value = "az";
+                    sel.dispatchEvent(new Event("change", { bubbles: true }));
+                    const names = $$("#c-ready .c-row").map((li) => li.dataset.slug);
+                    check(names[0] === "apple-pie", "sort A to Z", names.join(","));
+                    check(W().CM.store.get("cookbook:sort") === "az", "sort is remembered");
+                    await go("#/r/sheng-jian-bao");
+                    check(activeNav().every((n) => n === "cookbook") && $(".crumb").getAttribute("href") === "#/cookbook", "a recipe keeps Cookbook selected and links back to it");
+
+                    await go("#/r/apple-pie");
+                    check($$(".row").length === 21, "apple pie has 21 checkable rows", $$(".row").length);
+                    const first = () => $(".r-col--ing .row");
+                    click(first().querySelector(".row-body"));
+                    check(first().classList.contains("is-done"), "tapping a row checks it");
+                    check(JSON.parse(localStorage.getItem("cm:checks:apple-pie")).length === 1, "check is saved");
+                    check($(".prog-label").textContent === "1/21", "progress label", $(".prog-label").textContent);
+                    click($('[data-scale="1"]'));
+                    click($('[data-scale="1"]'));
+                    check($(".scale-val").textContent === "2×", "scale up to 2×", $(".scale-val").textContent);
+                    check(first().querySelector(".qty").textContent === "5 cups", "2.5 cups × 2 = 5 cups", first().querySelector(".qty").textContent);
+                    check(first().classList.contains("is-done"), "checks survive re-render");
+                    click($('[data-units="metric"]'));
+                    await sleep(50);
+                    check(first().querySelector(".qty").textContent === "1.18 l", "metric conversion", first().querySelector(".qty").textContent);
+                    check($(".chip--temp").textContent === "190–220 °C", "oven temp converts", $(".chip--temp").textContent);
+                    click($('[data-units="original"]'));
+                    await sleep(50);
+                    check($(".chip--temp").textContent === "375–425 °F", "back to original", $(".chip--temp").textContent);
+                    click($('[data-scale="-1"]'));
+                    click($('[data-scale="-1"]'));
+                    check($(".scale-val").textContent === "1×", "scale back to 1×");
+                    check(first().querySelector(".qty").textContent === "2.5 cups", "1× shows it as written", first().querySelector(".qty").textContent);
+
+                    click($(".chip--time"));
+                    await sleep(60);
+                    check($$("#timers .timer").length === 1, "tapping a time starts a timer");
+                    check(/Apple Pie · step 1/.test($("#timers .timer-label").textContent), "timer is labelled with the step", $("#timers .timer-label").textContent);
+                    click($('#timers [data-act="close"]'));
+                    await sleep(30);
+                    check($$("#timers .timer").length === 0, "timer can be cancelled");
+
+                    const steps = () => $$(".row--step");
+                    click(steps()[0].querySelector(".row-body"));
+                    check(steps()[1].classList.contains("is-current"), "next step becomes current");
+                    click($('[data-act="cook"]'));
+                    check($(".recipe").classList.contains("is-cooking"), "cook mode on");
+                    click($('[data-act="cook"]'));
+
+                    await load("#/r/apple-pie");
+                    check(first().classList.contains("is-done") && steps()[0].classList.contains("is-done"), "checks persist after reload");
+                    click($('[data-act="reset"]'));
+                    check(!$$(".row.is-done").length, "reset unchecks everything");
+                    click(D().querySelector(".toast-act"));
+                    check($$(".row.is-done").length === 2, "undo brings them back", $$(".row.is-done").length);
+
+                    await go("#/r/zha-xia");
+                    const g = $(".gloss");
+                    click(g);
+                    await sleep(30);
+                    check($("#gloss-pop") && /sweet potato starch|shrimp|stir-fry/.test($("#gloss-pop").textContent), "glossary popover", $("#gloss-pop") && $("#gloss-pop").textContent);
+                    check(!g.closest(".row").classList.contains("is-done"), "tapping a term doesn't check the row");
+                    click(D().body);
+
+                    await go("#/manifesting");
+                    check($$("#m-open .row").length === W().CM.manifesting.length, "manifesting lists the ideas", $$("#m-open .row").length);
+                    check(/Pistachio/.test($("#m-open .row .m-title").textContent), "critical first", $("#m-open .row .m-title").textContent);
+                    click($("#m-add"));
+                    const f = $("#m-form");
+                    f.elements.title.value = "Test dumplings";
+                    f.elements.priority.value = "high";
+                    f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event("submit", { cancelable: true }));
+                    await sleep(30);
+                    check($$("#m-open .m-title").some((x) => x.textContent === "Test dumplings"), "add an idea");
+                    const row = $$("#m-open .row").find((r) => r.textContent.includes("Pistachio"));
+                    click(row.querySelector(".row-body"));
+                    await sleep(800);
+                    check($$("#m-done .m-title").some((x) => /Pistachio/.test(x.textContent)), "checked idea moves to Manifested");
+                    check(!$("#m-copy").hidden, "copy-as-data appears for local ideas");
+                    const del = $$("#m-open .row").find((r) => r.textContent.includes("Test dumplings")).querySelector("[data-del]");
+                    click(del);
+                    await sleep(30);
+                    check(!$$("#m-open .m-title").some((x) => x.textContent === "Test dumplings"), "delete an idea");
+                    // merge round trip: once an idea is in the data file, the browser's copy is dropped
+                    W().CM.store.set("manifest:local", [{ id: "l:merge", title: "Merged dish", priority: "low", added: "2026-11-01" }]);
+                    W().CM.manifesting.push({ title: "merged dish", priority: "low", done: "2026-11-02" });
+                    await go("#/");
+                    await go("#/manifesting");
+                    const merged = $$(".row").filter((r) => /merged dish/i.test(r.textContent));
+                    check(merged.length === 1 && !W().CM.store.get("manifest:local", []).length, "a merged idea shows once and the browser copy is dropped", merged.length);
+                    check(merged[0] && merged[0].closest("#m-done") && merged[0].querySelector(".row-input").disabled, "done: in the data file manifests it for everyone");
+                    W().CM.manifesting.pop();
+
+                    await go("#/notebook");
+                    const wf = $("#w-form");
+                    wf.elements.what.value = "Carbon steel wok";
+                    wf.elements.note.value = "https://example.com/wok";
+                    wf.requestSubmit ? wf.requestSubmit() : wf.dispatchEvent(new Event("submit", { cancelable: true }));
+                    await sleep(30);
+                    check($$("#w-list .row").length === 1 && $("#w-list a[href='https://example.com/wok']"), "wishlist add (a URL becomes a link)");
+                    click($("#n-new"));
+                    await sleep(30);
+                    const ta = $(".note-body-in");
+                    ta.value = "Ask about 八珍 packs";
+                    ta.dispatchEvent(new Event("input", { bubbles: true }));
+                    await sleep(500);
+                    check(/八珍/.test(localStorage.getItem("cm:notes:local")), "notes autosave");
+                    W().CM.notebook.wishlist.push({ item: "carbon steel wok", kind: "tool", got: "2026-11-02" });
+                    W().CM.notebook.notes.push({ title: "", date: "2026-11-02", body: "Ask about 八珍 packs" });
+                    await go("#/");
+                    await go("#/notebook");
+                    check($$("#w-list .row").length === 1 && !W().CM.store.get("wish:local", []).length && $("#w-list .row-input").disabled, "a merged wishlist item shows once, ticked off");
+                    check($$(".note--local").length === 0 && $$(".note").length === 1, "a merged note shows once", $$(".note").length);
+                    W().CM.notebook.wishlist.pop();
+                    W().CM.notebook.notes.pop();
+
+                    await go("#/tools");
+                    check(/16\s*tablespoon/.test($("#cv-out").textContent), "1 cup = 16 tbsp", $("#cv-out").textContent);
+                    check($("#cg-g").value === "120", "1 cup flour = 120 g", $("#cg-g").value);
+                    check($("#sv-f").textContent === "1.5×", "4 → 6 servings is 1.5×");
+                    check(/1⅛ cups/.test($("#sv-out").textContent), "¾ cup × 1.5 = 1⅛ cups", $("#sv-out").textContent);
+
+                    click($("#settings-btn"));
+                    await sleep(30);
+                    click($('#settings [data-set="theme"] [data-v="night"]'));
+                    check(D().documentElement.dataset.theme === "night", "night theme from settings");
+                    click($('#settings [data-set="text"] [data-v="l"]'));
+                    check(D().documentElement.dataset.text === "l", "large text");
+                    click($("#settings [data-close]"));
+                } catch (e) {
+                    check(false, "test crashed", e && e.stack);
+                } finally {
+                    Object.keys(localStorage).filter((k) => k.startsWith("cm:")).forEach((k) => localStorage.removeItem(k));
+                    Object.entries(backup).forEach(([k, v]) => localStorage.setItem(k, v));
+                }
+                const failed = results.filter((r) => !r.ok).length;
+                log.insertAdjacentHTML("beforeend", `<br><b id="summary" class="${failed ? "bad" : "ok"}">${results.length - failed} passed, ${failed} failed</b>`);
+                document.title = failed ? "FAIL" : "PASS";
+            }
+            run();
+        </script>
+    </body>
+</html>
